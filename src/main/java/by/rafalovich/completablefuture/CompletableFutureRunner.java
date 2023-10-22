@@ -17,80 +17,92 @@ public class CompletableFutureRunner {
         // complete method
         System.out.println(calculateAsync().get());
 
-        // completedFuture
+        // -- completedFuture(result)
         Future<String> predefinedFuture = CompletableFuture.completedFuture("Future is predefined.");
-        System.out.println(predefinedFuture.get());
+        System.out.println("Result: " + predefinedFuture.get());
 
-        CompletableFuture<String> completableFuture = CompletableFuture.supplyAsync(() -> "Async execution from " + getName());
 
-        // thenApply - map analog
-        CompletableFuture<String> future = completableFuture.thenApply(s -> s + " World from " + getName());
-        System.out.println(future.get());
+        // ----------------------------Executing some code asynchronously
+        //
+        // -- runAsync(runnable)
+        CompletableFuture.runAsync(() -> System.out.println("Runnable instance from " + getName()));
+        // -- supplyAsync(supplier)
+        CompletableFuture<String> completableFuture =
+                CompletableFuture.supplyAsync(() -> "Supplier instance from " + getName());
 
-        // thenAccept
-        CompletableFuture<Void> future2 = completableFuture.thenAccept(s -> System.out.println("Computation returned: " + s));
-        future2.get();
 
-        // thenRun
+        // ----------------------Processing Results of Asynchronous Computations
+        //
+        // -- thenApply(function) - map analog  - (run in the current thread)
+        // -- thenApplyAsync(function) - map analog  - (run in the thread from async threadPool)
+        CompletableFuture<String> future = completableFuture.thenApply(previousResult ->
+                previousResult + ". Then apply function from " + getName());
+        System.out.println("Result: " + future.get());
+        // -- thenAccept(consumer) - (run in the current thread)
+        // -- thenAcceptAsync - (run in the thread from async threadPool)
+        CompletableFuture<Void> future2 = completableFuture.thenAccept(previousResult ->
+                System.out.printf("%s. Then consume by consumer from %s%n", previousResult, getName()));
+        System.out.println("Result: " + future2.get());
+        // -- thenRun(runnable) - (run in the current thread)
+        // -- thenRunAsync(runnable) - (run in the thread from async threadPool)
         CompletableFuture<Void> future3 = completableFuture
-                .thenRun(() -> System.out.println("Computation finished."));
+                .thenRun(() -> System.out.println("Then run runnable from " + getName()));
+        System.out.println("Result: " + future3.get());
 
-        future3.get();
 
         // ------------------- Chaining and combining futures
-
-        // thenCompose -- flatMap analog - sequential computation
+        //
+        // -- thenCompose(completableFuture) == flatMap analog - sequential computation
+        // -- thenComposeAsync(completableFuture) == flatMap analog - sequential computation
         CompletableFuture<String> composedFuture = CompletableFuture.supplyAsync(() -> {
                     try {
                         Thread.sleep(3_000);
-                        System.out.println("first after sleeping");
-                        return "Hello from " + getName();
+                        System.out.println("1.1");
+                        return "Hello from 1.1 + " + getName();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         return "error";
                     }
                 })
-                .thenCompose(s -> CompletableFuture.supplyAsync(() -> {
-                    System.out.println("----------------");
-                    return s + " World from " + getName();
+                .thenComposeAsync(previousResult -> CompletableFuture.supplyAsync(() -> {
+                    System.out.println("1.2");
+                    return previousResult + ". Hello from 1.2 " + getName();
                 }));
+        System.out.println("Result: " + composedFuture.get());
 
-        System.out.println(composedFuture.get());
-
-        // thenCombine - parallel computation + combining
+        // -- thenCombine(completableFuture) == parallel computation + combining
         completableFuture
                 = CompletableFuture.supplyAsync(() -> {
                     try {
                         Thread.sleep(3_000);
-                        System.out.println("first after sleeping");
-                        return "Hello from " + getName();
+                        System.out.println("2.1");
+                        return "Hello from 2.1 " + getName();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         return "error";
                     }
                 })
-                .thenCombine(CompletableFuture.supplyAsync(() -> {
-                                    try {
-                                        Thread.sleep(1_000);
-                                        System.out.println("second after sleeping");
-                                        return " World from " + getName();
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                        return "error";
-                                    }
-                                }
-                        ),
-                        (s1, s2) -> {
+                .thenCombine(
+                        CompletableFuture.supplyAsync(() -> {
+                            try {
+                                Thread.sleep(1_000);
+                                System.out.println("2.2");
+                                return "Hello from 2.2 " + getName();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                return "error";
+                            }
+                        }),
+                        (firstResult, secondResult) -> {
                             try {
                                 Thread.sleep(1_000);
                             } catch (InterruptedException e) {
                                 throw new RuntimeException(e);
                             }
                             System.out.println("BiFunction is ran from " + getName());
-                            return s1 + s2;
+                            return firstResult + " " + secondResult;
                         });
-
-        System.out.println(completableFuture.get());
+        System.out.println("Result: " + completableFuture.get());
 
 
         //--------------------- Running Multiple Futures in Parallel
@@ -110,7 +122,7 @@ public class CompletableFutureRunner {
         String combined = Stream.of(future4, future5, future6)
                 .map(CompletableFuture::join)
                 .collect(Collectors.joining(" "));
-        System.out.println(combined);
+        System.out.println("Result: " + combined);
 
 
         // ------------------------ Handling Errors
@@ -121,9 +133,9 @@ public class CompletableFutureRunner {
                 throw new RuntimeException("Computation error!");
             }
             return "Hello, " + name;
-        }).handle((s, throwable) -> s != null ? s : "Hello, Stranger!");
+        }).handle((result, throwable) -> result != null ? result : "Hello, Stranger!");
 
-        System.out.println(completableFutureWithErrorHandling.get());
+        System.out.println("Result: " + completableFutureWithErrorHandling.get());
     }
 
     private static Future<String> calculateAsync() {
@@ -137,7 +149,7 @@ public class CompletableFutureRunner {
                 throw new RuntimeException(e);
             }
             // could be completed as promise
-            completableFuture.complete("Future is completed by another thread.");
+            completableFuture.complete("Future is completed by another thread from " + getName());
         });
 
         executorService.shutdown();
