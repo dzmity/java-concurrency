@@ -11,6 +11,7 @@ public class BlockingQueueRunner {
             new ConsumerThread(warehouse).start();
         }
 
+        Thread.sleep(1_000);
         System.out.printf("Waiting for producers...%n%n");
         Thread.sleep(1_000);
 

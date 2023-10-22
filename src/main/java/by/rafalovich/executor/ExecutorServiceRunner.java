@@ -68,7 +68,7 @@ public class ExecutorServiceRunner {
         });
         // get  - use to wait until the submitted task is finished and the value is returned
         System.out.println(runnableFuture.get());
-        runnableFuture = executorService.submit(() -> System.out.println("Hello lesson 29"), "12345");
+        runnableFuture = executorService.submit(() -> System.out.println("Hello lesson 29"), "defaultResult");
         System.out.println(runnableFuture.get());
         // submit Callable
         Future<String> callableFuture = executorService.submit(secondCallable);
