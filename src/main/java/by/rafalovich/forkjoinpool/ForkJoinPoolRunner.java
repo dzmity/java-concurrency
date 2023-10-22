@@ -3,12 +3,18 @@ package by.rafalovich.forkjoinpool;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.concurrent.RecursiveTask;
 
 public class ForkJoinPoolRunner {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         int[] array = MathUtil.prepareArray();
 
         long startTime = System.currentTimeMillis();
@@ -18,6 +24,31 @@ public class ForkJoinPoolRunner {
         long endTime = System.currentTimeMillis();
         System.out.println(sum);
         System.out.println(endTime - startTime + " mS for the computing");
+
+        //////////////// Divide task by user  /////////////////////////////////
+
+        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(4);
+        double result = 0;
+        startTime = System.currentTimeMillis();
+
+        List<Callable<Double>> tasks = Arrays.asList(
+                () -> MathUtil.calculate(array, 0, array.length / 4),
+                () -> MathUtil.calculate(array, array.length / 4, array.length / 2),
+                () -> MathUtil.calculate(array, array.length / 2, array.length * 3 / 4),
+                () -> MathUtil.calculate(array, array.length * 3 / 4, array.length)
+        );
+        List<Future<Double>> futures = fixedThreadPool.invokeAll(tasks);
+
+        for (Future<Double> future: futures) {
+            result += future.get();
+        }
+
+        endTime = System.currentTimeMillis();
+        System.out.println(result);
+        System.out.println(endTime - startTime + " mS for the computing");
+
+        fixedThreadPool.shutdown();
+
 
         ////////////////   Using ForkJoinPool Directly  ///////////////////////////////
 
