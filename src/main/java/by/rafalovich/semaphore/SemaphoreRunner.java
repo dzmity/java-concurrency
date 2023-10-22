@@ -18,5 +18,8 @@ public class SemaphoreRunner {
         Thread.sleep(5_000);
 
         threads.forEach(Thread::interrupt);
+        for (Thread thread : threads) {
+            thread.join();
+        }
     }
 }
